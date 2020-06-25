@@ -14,15 +14,16 @@ Vagrant.configure("2") do |config|
   # config.ssh.private_key_path = "/Users/charlmert/.ssh/id_rsa_vagrant"
   # config.vm.provision "file", source: "/Users/charlmert/.ssh/id_rsa_vagrant.pub", destination: "~/.ssh/authorized_keys"
 
-  config.vm.network "forwarded_port", guest: 22, host: 5599
-  config.vm.network "forwarded_port", guest: 7547, host: 7547
-  config.vm.network "forwarded_port", guest: 7545, host: 7545
+  config.vm.network "forwarded_port", guest: 22, host: 5595
+  # config.vm.network "forwarded_port", guest: 7547, host: 7547
+  # config.vm.network "forwarded_port", guest: 7545, host: 7545
   #config.vm.network "forwarded_port", guest: 80, host: 8083
   #config.vm.network "forwarded_port", guest: 443, host: 8084
   #config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
 
   config.vm.network "private_network", ip: "192.168.33.61"
-  config.vm.network "public_network", ip: "192.168.0.25"
+  # config.vm.network "public_network", ip: "192.168.0.25"
+  config.vm.network "public_network", ip: "10.0.0.5"
   #config.vm.network "public_network", use_dhcp_assigned_default_route: true
   config.vm.synced_folder ".", "/opt/acs", type: 'nfs'
 
