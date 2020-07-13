@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+var privateKey = fs.readFileSync('/home/acs/.ssh/id_rsa');
+var token = jwt.sign(
+  {
+    exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 365 * 10),
+    username: 'admin'
+  },
+  privateKey,
+  {
+    algorithm: 'RS256'
+  }
+);
+
+console.log('Your token is: "' + token + '"')

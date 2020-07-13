@@ -69,9 +69,18 @@ export function parseAuthorizationHeader(authHeader): { method: string } {
     res["password"] = creds[2];
   } else if (method === "Digest") {
     Object.assign(res, parseHeaderFeilds(authHeader.slice(method.length + 1)));
+  } else if (method === "Bearer") {
+    // const jwt = require("jsonwebtoken")
+    // const jwt_secret = "HideThisValueFromEveryone"
+    // let user = {...}
+    //
+    // // Create token
+    // let token = jwt.sign(user, jwt_secret)
+    //
+    // // Verify token
+    // let authUser = jwt.verify(token, jwt_secret)
+    // return res;
   }
-
-  return res;
 }
 
 export function parseWwwAuthenticateHeader(authHeader): {} {
