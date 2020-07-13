@@ -85,6 +85,19 @@ export function listener(request, response): void {
     var privateKey = fs.readFileSync('/home/acs/.ssh/id_rsa');
     try {
       var payload = jwt.verify(authHeader.split(' ')[1], privateKey, { algorithms: ['RS256']});
+
+      db.getUsers().then(user => {
+        Object.keys(user).forEach(function(hk) {
+          logger.info({message: hk + ': ' + user[hk]})
+        })
+      })
+      /*
+      Object.keys(db).forEach(function(hk) {
+        logger.info({message: hk + ': ' + db[hk]})
+      })
+      */
+
+
       return true
     } catch (e) {
       return false
