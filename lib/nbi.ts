@@ -81,45 +81,63 @@ export function listener(request, response): void {
     return body;
   }
 
-  function authenticateJWT(authHeader): Boolean {
-    var privateKey = fs.readFileSync('/home/acs/.ssh/id_rsa');
-    try {
-      var payload = jwt.verify(authHeader.split(' ')[1], privateKey, { algorithms: ['RS256']});
+  function authenticateJWT(authHeader): Promise {
+    return new Promise(function(resolve, reject) {
+      var privateKey = fs.readFileSync('/home/acs/.ssh/id_rsa');
+      try {
+        var payload = jwt.verify(authHeader.split(' ')[1], privateKey, { algorithms: ['RS256']});
 
-      db.getUsers().then(user => {
-        Object.keys(user).forEach(function(hk) {
-          logger.info({message: hk + ': ' + user[hk]})
+        db.getUsers().then(user => {
+          var userExists = false
+          Object.keys(user).forEach(function(hk) {
+            if (user[hk]['_id'] == payload.username) {
+              userExists = true
+              resolve(userExists)
+            }
+          })
+          reject(userExists)
         })
-      })
-      /*
-      Object.keys(db).forEach(function(hk) {
-        logger.info({message: hk + ': ' + db[hk]})
-      })
-      */
-
-
-      return true
-    } catch (e) {
-      return false
-    }
+      } catch (e) {
+        logger.warn({ message: 'error authenticating/verifying token' })
+        logger.warn({ message: e })
+        reject(false)
+      }
+    })
   }
 
-  function authenticate(request): Boolean {
-    // Logging failed auth attempts
-    if (request.headers.hasOwnProperty('authorization') && authenticateJWT(request.headers.authorization) == false) {
-      log('token verification failed');
-      Object.keys(request.headers).forEach(function(hk) {
-        logger.info({message: hk + ': ' + request.headers[hk]})
-      })
-      log('token verification failed end');
-    }
-    return request.headers.hasOwnProperty('authorization') && authenticateJWT(request.headers.authorization)
+  function authenticate(request): Promise {
+    return new Promise(function(resolve, reject) {
+      // Logging failed auth attempts
+      if (!request.headers.hasOwnProperty('authorization')) {
+        log('token authentication/verification failed - no Bearer token was specified');
+        Object.keys(request.headers).forEach(function(hk) {
+          logger.info({message: hk + ': ' + request.headers[hk]})
+        })
+        log('token authentication/verification failed - no Bearer token was specified end');
+
+        reject(false)
+      }
+
+      if (request.headers.hasOwnProperty('authorization')) {
+        authenticateJWT(request.headers.authorization).then(function(authenticated) {
+          resolve(true)
+        }, function(authenticated) {
+          log('token authentication/verification failed');
+          Object.keys(request.headers).forEach(function(hk) {
+            logger.info({message: hk + ': ' + request.headers[hk]})
+          })
+          log('token authentication/verification failed');
+
+          reject(false)
+        })
+      }
+    })
   }
 
   request.addListener("end", () => {
     const body = getBody();
     const urlParts = url.parse(request.url, true);
-    if (authenticate(request)) {
+    authenticate(request).then(function(authenticated) {
       if (PRESETS_REGEX.test(urlParts.pathname)) {
         const presetName = querystring.unescape(
           PRESETS_REGEX.exec(urlParts.pathname)[1]
@@ -801,33 +819,35 @@ export function listener(request, response): void {
         response.writeHead(404);
         response.end("404 Not Found");
       }
-    } else if (AUTH_TOKEN_REGEX.test(urlParts.pathname)) {
-      if (request.method === "POST") {
-        const authHeader = request.headers.Authorization
+    }, function(authenticated) {
+      if (AUTH_TOKEN_REGEX.test(urlParts.pathname)) {
+        if (request.method === "POST") {
+          const authHeader = request.headers.Authorization
 
-        var privateKey = fs.readFileSync('/home/acs/.ssh/id_rsa');
-        var token = jwt.sign(
-          {
-            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 365 * 10),
-            username: 'admin'
-          },
-          privateKey,
-          {
-            algorithm: 'RS256'
-          }
-        );
+          var privateKey = fs.readFileSync('/home/acs/.ssh/id_rsa');
+          var token = jwt.sign(
+            {
+              exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 365 * 10),
+              username: 'admin'
+            },
+            privateKey,
+            {
+              algorithm: 'RS256'
+            }
+          );
 
-        // log(body.toString())
-        // const auth = JSON.parse(body.toString());
-        // log(auth.username)
-        // log(auth.password)
+          // log(body.toString())
+          // const auth = JSON.parse(body.toString());
+          // log(auth.username)
+          // log(auth.password)
+        } else {
+          response.writeHead(405, { Allow: "POST" });
+          response.end("405 Method Not Allowed");
+        }
       } else {
-        response.writeHead(405, { Allow: "POST" });
-        response.end("405 Method Not Allowed");
+        response.writeHead(401);
+        response.end("401 Not Authorized");
       }
-    } else {
-      response.writeHead(401);
-      response.end("401 Not Authorized");
-    }
+    })
   });
 }
