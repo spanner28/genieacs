@@ -5,6 +5,7 @@ radius.log.gz
 radius1.log
 *.cnf
 .vagrant*
+dist/*
 __pycache__
 **node_modules/
 xgateway/settings.py
