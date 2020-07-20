@@ -54,6 +54,7 @@ const options = {
   NBI_INTERFACE: { type: "string", default: "0.0.0.0" },
   NBI_SSL_CERT: { type: "string", default: "" },
   NBI_SSL_KEY: { type: "string", default: "" },
+  NBI_SSH_KEY: { type: "string", default: "~/.ssh/id_rsa" },
   NBI_LOG_FILE: { type: "path", default: "" },
   NBI_ACCESS_LOG_FILE: { type: "path", default: "" },
 

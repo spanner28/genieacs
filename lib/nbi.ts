@@ -31,6 +31,7 @@ import { ping } from "./ping";
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import * as logger from "./logger";
+const homeDir = require('os').homedir();
 
 const AUTH_TOKEN_REGEX = /^\/auth\/token\/?$/;
 const DEVICE_TASKS_REGEX = /^\/devices\/([a-zA-Z0-9\-_%]+)\/tasks\/?$/;
@@ -83,7 +84,16 @@ export function listener(request, response): void {
 
   function authenticateJWT(authHeader): Promise {
     return new Promise(function(resolve, reject) {
-      var privateKey = fs.readFileSync('/home/acs/.ssh/id_rsa');
+      var privateKey = config.get("NBI_SSH_KEY").replace('~', homeDir);
+      if (!fs.existsSync(privateKey)) {
+        logger.warn({ message: 'error authenticating/verifying token' })
+        logger.warn({ message: 'File does not exist: "' + privateKey + '"' })
+        logger.warn({ message: 'error authenticating/verifying token end' })
+        reject(false)
+      } else {
+        logger.info({ message: 'Using ssh key file: "' + keyFile + '"' })
+      }
+      var privateKey = fs.readFileSync(keyFile);
       try {
         var payload = jwt.verify(authHeader.split(' ')[1], privateKey, { algorithms: ['RS256']});
 
@@ -120,15 +130,19 @@ export function listener(request, response): void {
 
       if (request.headers.hasOwnProperty('authorization')) {
         authenticateJWT(request.headers.authorization).then(function(authenticated) {
+
           resolve(true)
-        }, function(authenticated) {
+
+        }, function(error) {
+
           log('token authentication/verification failed');
           Object.keys(request.headers).forEach(function(hk) {
             logger.info({message: hk + ': ' + request.headers[hk]})
           })
-          log('token authentication/verification failed');
+          log('token authentication/verification failed end');
 
           reject(false)
+
         })
       }
     })
@@ -819,7 +833,7 @@ export function listener(request, response): void {
         response.writeHead(404);
         response.end("404 Not Found");
       }
-    }, function(authenticated) {
+    }, function(error) {
       if (AUTH_TOKEN_REGEX.test(urlParts.pathname)) {
         if (request.method === "POST") {
           const authHeader = request.headers.Authorization
