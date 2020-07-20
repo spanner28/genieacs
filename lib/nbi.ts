@@ -85,14 +85,14 @@ export function listener(request, response): void {
   function authenticateJWT(authHeader): Promise {
     return new Promise(function(resolve, reject) {
       var privateKey = config.get("NBI_SSH_KEY").replace('~', homeDir);
+
       if (!fs.existsSync(privateKey)) {
         logger.warn({ message: 'error authenticating/verifying token' })
         logger.warn({ message: 'File does not exist: "' + privateKey + '"' })
         logger.warn({ message: 'error authenticating/verifying token end' })
         reject(false)
-      } else {
-        logger.info({ message: 'Using ssh key file: "' + keyFile + '"' })
       }
+
       var privateKey = fs.readFileSync(keyFile);
       try {
         var payload = jwt.verify(authHeader.split(' ')[1], privateKey, { algorithms: ['RS256']});
