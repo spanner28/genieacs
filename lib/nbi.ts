@@ -84,15 +84,16 @@ export function listener(request, response): void {
 
   function authenticateJWT(authHeader): Promise {
     return new Promise(function(resolve, reject) {
-      var privateKey = config.get("NBI_SSH_KEY").replace('~', homeDir);
+      var keyFile = config.get("NBI_SSH_KEY").replace('~', homeDir);
 
-      if (!fs.existsSync(privateKey)) {
+      if (!fs.existsSync(keyFile)) {
         logger.warn({ message: 'error authenticating/verifying token' })
-        logger.warn({ message: 'File does not exist: "' + privateKey + '"' })
+        logger.warn({ message: 'File does not exist: "' + keyFile + '"' })
         logger.warn({ message: 'error authenticating/verifying token end' })
         reject(false)
       }
 
+	  // logger.warn({ message: 'Using key file: ' + keyFile })
       var privateKey = fs.readFileSync(keyFile);
       try {
         var payload = jwt.verify(authHeader.split(' ')[1], privateKey, { algorithms: ['RS256']});
@@ -136,6 +137,8 @@ export function listener(request, response): void {
         }, function(error) {
 
           log('token authentication/verification failed');
+          log('Exception')
+          log(error)
           Object.keys(request.headers).forEach(function(hk) {
             logger.info({message: hk + ': ' + request.headers[hk]})
           })

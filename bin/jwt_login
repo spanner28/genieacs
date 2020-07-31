@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const homeDir = require('os').homedir();
+
+if (process.argv.length < 5) {
+  console.error('Please specify username, private key file path and token');
+  process.exit(1)
+}
+
+var username = process.argv[2];
+var keyFile = process.argv[3];
+var token = process.argv[4];
+
+function log(message) {
+    console.log(message)
+}
+
+function authenticateJWT(username, token) {
+	return new Promise(function(resolve, reject) {
+		var privateKey = keyFile.replace('~', homeDir);
+
+		if (!fs.existsSync(privateKey)) {
+			log({ message: 'error authenticating/verifying token 3' })
+			log({ message: 'File does not exist: "' + privateKey + '"' })
+			log({ message: 'error authenticating/verifying token end 3' })
+			reject(false)
+		}
+
+		var privateKey = fs.readFileSync(keyFile);
+		try {
+			var payload = jwt.verify(token, privateKey, { algorithms: ['RS256']});
+
+			var userExists = false
+			if (payload.username == username) {
+				userExists = true
+				resolve(userExists)
+			}
+			reject(userExists)
+		} catch (e) {
+			log({ message: 'error authenticating/verifying token 2' })
+			log({ message: e })
+			reject(false)
+		}
+	})
+}
+
+function authenticate(username, token) {
+	return new Promise(function(resolve, reject) {
+		// Logging failed auth attempts
+
+		authenticateJWT(username, token).then(function(authenticated) {
+
+			resolve(true)
+
+		}, function(error) {
+
+			log('token authentication/verification failed 1');
+
+			reject(false)
+
+		})
+	})
+}
+
+if (authenticate(username, token)) {
+	console.log('User successfully authenticated')
+} else {
+	console.log('Authneitcation failed')
+}
